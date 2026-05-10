@@ -2,7 +2,8 @@ import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-SIZE = 10000
+SIZE = 20   # keep small for printing
+
 
 # ============================
 # Sequential Bubble Sort
@@ -27,22 +28,26 @@ def bubble_sort_parallel(arr):
             if arr[j] > arr[j + 1]:
                 arr[j], arr[j + 1] = arr[j + 1], arr[j]
 
-    for _ in range(n):
+    # Create thread pool only once
+    with ThreadPoolExecutor(max_workers=2) as executor:
 
-        # Even phase
-        with ThreadPoolExecutor() as executor:
-            executor.submit(compare_and_swap, 0).result()
+        for _ in range(n):
 
-        # Odd phase
-        with ThreadPoolExecutor() as executor:
-            executor.submit(compare_and_swap, 1).result()
+            # Even phase
+            future1 = executor.submit(compare_and_swap, 0)
+
+            # Odd phase
+            future2 = executor.submit(compare_and_swap, 1)
+
+            future1.result()
+            future2.result()
 
 
 # ============================
 # Generate Random Array
 # ============================
 def generate_random(size):
-    return [random.randint(0, 100000) for _ in range(size)]
+    return [random.randint(0, 100) for _ in range(size)]
 
 
 # ============================
@@ -52,21 +57,31 @@ def main():
 
     arr = generate_random(SIZE)
 
+    # Print Original Array
+    print("Original Array:")
+    print(arr)
+
     # -------- Sequential Bubble Sort --------
-    temp = arr.copy()
+    temp1 = arr.copy()
 
     start = time.time()
-    bubble_sort_seq(temp)
+    bubble_sort_seq(temp1)
     end = time.time()
+
+    print("\nSequential Sorted Array:")
+    print(temp1)
 
     print(f"Sequential Bubble Sort Time: {end - start:.6f} sec")
 
     # -------- Parallel Bubble Sort --------
-    temp = arr.copy()
+    temp2 = arr.copy()
 
     start = time.time()
-    bubble_sort_parallel(temp)
+    bubble_sort_parallel(temp2)
     end = time.time()
+
+    print("\nParallel Sorted Array:")
+    print(temp2)
 
     print(f"Parallel Bubble Sort Time: {end - start:.6f} sec")
 
