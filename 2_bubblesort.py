@@ -1,9 +1,5 @@
-import random
 import time
 from concurrent.futures import ThreadPoolExecutor
-
-SIZE = 20   # keep small for printing
-
 
 # ============================
 # Sequential Bubble Sort
@@ -20,70 +16,175 @@ def bubble_sort_seq(arr):
 # ============================
 # Parallel Bubble Sort
 # ============================
+def even_phase(arr, n):
+    for j in range(0, n - 1, 2):
+        if arr[j] > arr[j + 1]:
+            arr[j], arr[j + 1] = arr[j + 1], arr[j]
+
+
+def odd_phase(arr, n):
+    for j in range(1, n - 1, 2):
+        if arr[j] > arr[j + 1]:
+            arr[j], arr[j + 1] = arr[j + 1], arr[j]
+
+
 def bubble_sort_parallel(arr):
     n = len(arr)
 
-    def compare_and_swap(start):
-        for j in range(start, n - 1, 2):
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-
-    # Create thread pool only once
-    with ThreadPoolExecutor(max_workers=2) as executor:
-
-        for _ in range(n):
-
-            # Even phase
-            future1 = executor.submit(compare_and_swap, 0)
-
-            # Odd phase
-            future2 = executor.submit(compare_and_swap, 1)
-
-            future1.result()
-            future2.result()
+    for i in range(n):
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            executor.submit(even_phase, arr, n)
+            executor.submit(odd_phase, arr, n)
 
 
 # ============================
-# Generate Random Array
+# Merge Function
 # ============================
-def generate_random(size):
-    return [random.randint(0, 100) for _ in range(size)]
+def merge(arr, l, m, r):
+
+    left = arr[l:m + 1]
+    right = arr[m + 1:r + 1]
+
+    i = 0
+    j = 0
+    k = l
+
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            arr[k] = left[i]
+            i += 1
+        else:
+            arr[k] = right[j]
+            j += 1
+        k += 1
+
+    while i < len(left):
+        arr[k] = left[i]
+        i += 1
+        k += 1
+
+    while j < len(right):
+        arr[k] = right[j]
+        j += 1
+        k += 1
 
 
 # ============================
-# Main Function
+# Sequential Merge Sort
+# ============================
+def merge_sort_seq(arr, l, r):
+
+    if l < r:
+
+        m = (l + r) // 2
+
+        merge_sort_seq(arr, l, m)
+        merge_sort_seq(arr, m + 1, r)
+
+        merge(arr, l, m, r)
+
+
+# ============================
+# Parallel Merge Sort
+# ============================
+def merge_sort_parallel(arr, l, r, depth):
+
+    if l < r:
+
+        m = (l + r) // 2
+
+        if depth <= 0:
+            merge_sort_seq(arr, l, m)
+            merge_sort_seq(arr, m + 1, r)
+
+        else:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+
+                executor.submit(
+                    merge_sort_parallel,
+                    arr,
+                    l,
+                    m,
+                    depth - 1
+                )
+
+                executor.submit(
+                    merge_sort_parallel,
+                    arr,
+                    m + 1,
+                    r,
+                    depth - 1
+                )
+
+        merge(arr, l, m, r)
+
+
+# ============================
+# Main
 # ============================
 def main():
 
-    arr = generate_random(SIZE)
+    n = int(input("Enter number of elements: "))
 
-    # Print Original Array
-    print("Original Array:")
-    print(arr)
+    arr = []
 
-    # -------- Sequential Bubble Sort --------
-    temp1 = arr.copy()
+    print("Enter elements one by one:")
 
-    start = time.time()
-    bubble_sort_seq(temp1)
-    end = time.time()
+    for i in range(n):
+        element = int(input(f"Element {i + 1}: "))
+        arr.append(element)
 
-    print("\nSequential Sorted Array:")
-    print(temp1)
-
-    print(f"Sequential Bubble Sort Time: {end - start:.6f} sec")
-
-    # -------- Parallel Bubble Sort --------
-    temp2 = arr.copy()
+    # -------- Bubble Sort Sequential --------
+    temp = arr.copy()
 
     start = time.time()
-    bubble_sort_parallel(temp2)
+
+    bubble_sort_seq(temp)
+
     end = time.time()
 
-    print("\nParallel Sorted Array:")
-    print(temp2)
+    print("\nSequential Bubble Sort:")
+    print("Sorted Array:", temp)
+    print("Execution Time:", end - start, "sec")
 
-    print(f"Parallel Bubble Sort Time: {end - start:.6f} sec")
+    # -------- Bubble Sort Parallel --------
+    temp = arr.copy()
+
+    start = time.time()
+
+    bubble_sort_parallel(temp)
+
+    end = time.time()
+
+    print("\nParallel Bubble Sort:")
+    print("Sorted Array:", temp)
+    print("Execution Time:", end - start, "sec")
+
+    # -------- Merge Sort Sequential --------
+    temp = arr.copy()
+
+    start = time.time()
+
+    merge_sort_seq(temp, 0, n - 1)
+
+    end = time.time()
+
+    print("\nSequential Merge Sort:")
+    print("Sorted Array:", temp)
+    print("Execution Time:", end - start, "sec")
+
+    # -------- Merge Sort Parallel --------
+    temp = arr.copy()
+
+    start = time.time()
+
+    merge_sort_parallel(temp, 0, n - 1, 4)
+
+    end = time.time()
+
+    print("\nParallel Merge Sort:")
+    print("Sorted Array:", temp)
+    print("Execution Time:", end - start, "sec")
 
 
 if __name__ == "__main__":
